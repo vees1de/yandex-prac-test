@@ -1,1 +1,10 @@
-Cargo.toml
+[package]
+name = "imitator"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "imitator"
+path = "src/lib.rs"
+
+[dependencies]
