@@ -1,34 +1,45 @@
-use std::error::Error;
-use std::env;
+use client::{SmartSocketClient, Command};
+use std::io::{self, Write};
 
-use client::{Command, SmartSocketClient}; // имя пакета = name из Cargo.toml
+fn main() {
+    let mut client = SmartSocketClient::new("127.0.0.1:7890".into())
+        .expect("can't connect to server");
 
-fn main() -> Result<(), Box<dyn Error>> {
-    // берём адрес сервера из аргументов или по умолчанию 127.0.0.1:7890
-    let server_address = env::args()
-        .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:7890".to_string());
+    println!("Подключено к умной розетке!");
+    println!("Команды:");
+    println!("  on      – включить");
+    println!("  off     – выключить");
+    println!("  status  – проверить состояние");
+    println!("  power   – получить мощность");
+    println!("  exit    – выйти");
+    println!();
 
-    println!("Connecting to {server_address}...");
+    loop {
+        print!("> ");
+        io::stdout().flush().unwrap(); // чтобы отображалось сразу
 
-    let mut client = SmartSocketClient::new(server_address)?;
-    println!("Connected.");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let command = input.trim().to_lowercase();
 
-    // 1. Включаем розетку
-    let resp = client.run_command(Command::TurnOn)?;
-    println!("TurnOn -> {resp}");
+        let cmd = match command.as_str() {
+            "on" => Command::TurnOn,
+            "off" => Command::TurnOff,
+            "status" => Command::IsEnabled,
+            "power" => Command::GetPower,
+            "exit" => {
+                println!("Выход...");
+                break;
+            }
+            _ => {
+                println!("Неизвестная команда. Попробуй: on/off/status/power/exit");
+                continue;
+            }
+        };
 
-    // 2. Проверяем, включена ли
-    let resp = client.run_command(Command::IsEnabled)?;
-    println!("IsEnabled -> {resp}");
-
-    // 3. Смотрим мощность
-    let resp = client.run_command(Command::GetPower)?;
-    println!("GetPower -> {resp}");
-
-    // 4. Выключаем
-    let resp = client.run_command(Command::TurnOff)?;
-    println!("TurnOff -> {resp}");
-
-    Ok(())
+        match client.run_command(cmd) {
+            Ok(response) => println!("Ответ: {}", response),
+            Err(err) => println!("Ошибка: {}", err),
+        }
+    }
 }
